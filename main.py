@@ -14,9 +14,9 @@ clock = pygame.time.Clock()
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.transform.rotozoom(pygame.image.load("Player.png").convert_alpha(), 0, PLAYER_SIZE)
         self.pos = pygame.math.Vector2(PLAYER_START_X, PLAYER_START_Y)
-        self.hitbox_rect = self.image.get_rect(center = self.pos)
+        self.image = pygame.transform.rotozoom(pygame.image.load("Player.png").convert_alpha(), 0, PLAYER_SIZE)
+        self.hitbox_rect = self.image.get_rect(center=self.pos)
         self.rect = self.hitbox_rect.copy()
         self.speed = PLAYER_SPEED
         self.shoot = False
@@ -24,10 +24,10 @@ class Player(pygame.sprite.Sprite):
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
-        self.x_change_mouse_player = (self.mouse_coords[0] - self.hitbox_rect.x + self.hitbox_rect[0] / 2)
-        self.y_change_mouse_player = (self.mouse_coords[1] - self.hitbox_rect.y + self.hitbox_rect[1] / 2)
+        self.x_change_mouse_player = (self.mouse_coords[0] - self.hitbox_rect.centerx)
+        self.y_change_mouse_player = (self.mouse_coords[1] - self.hitbox_rect.centery)
         self.angle = math.degrees(math.atan2(self.y_change_mouse_player, self.x_change_mouse_player))
-        self.rect = self.image.get_rect(center = self.hitbox_rect.center)
+        self.rect = self.image.get_rect(center=self.hitbox_rect.center)
 
     def user_input(self):
         self.velocity_x = 0
@@ -39,13 +39,13 @@ class Player(pygame.sprite.Sprite):
             self.velocity_y = -self.speed
         if keys[pygame.K_s]:
             self.velocity_y = self.speed
-        if keys[pygame.K_a]:
-            self.velocity_x = -self.speed
         if keys[pygame.K_d]:
             self.velocity_x = self.speed
+        if keys[pygame.K_a]:
+            self.velocity_x = -self.speed
 
         # obsługa poruszania się po przekątnej
-        if self.velocity_x != 0 and self.velocity_y != 0:
+        if self.velocity_x != 0 and self.velocity_y != 0:  # moving diagonally
             self.velocity_x /= math.sqrt(2)
             self.velocity_y /= math.sqrt(2)
 
@@ -65,7 +65,8 @@ class Player(pygame.sprite.Sprite):
 
     def move(self):
         self.pos += pygame.math.Vector2(self.velocity_x, self.velocity_y)
-        self.hitbox_rect = self.pos
+        self.hitbox_rect.center = self.pos
+        self.rect.center = self.hitbox_rect.center
 
     def update(self):
         self.user_input()
@@ -89,13 +90,18 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = BULLET_SPEED
         self.x_vel = math.cos(self.angle * (2*math.pi/360)) * self.speed
         self.y_vel = math.sin(self.angle * (2*math.pi/360)) * self.speed
+        self.bullet_lifetime = BULLET_LIFETIME
+        self.spawn_time = pygame.time.get_ticks()
 
     def bullet_movement(self):
-        self.x == self.x_vel
-        self.y == self.y_vel
+        self.x += self.x_vel
+        self.y += self.y_vel
 
         self.rect.x = int(self.x)
         self.rect.y = int(self.y)
+
+        if pygame.time.get_ticks() - self.spawn_time > self.bullet_lifetime:
+            self.kill()
 
     def update(self):
         self.bullet_movement()
