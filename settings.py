@@ -1,6 +1,15 @@
+# Ustawienia gry
 WIDTH = 1280
 HEIGHT = 720
 FPS = 60
+
+# Ustawienia Gracza
 PLAYER_START_X = 400
 PLAYER_START_Y = 500
 PLAYER_SPEED = 5
+PLAYER_SIZE = 0.4
+
+# Ustawienia pocisku
+SHOOT_COOLDOWN = 20
+BULLET_SCALE = 1.5
+BULLET_SPEED = 10
