@@ -60,8 +60,14 @@ class Player(pygame.sprite.Sprite):
             self.shoot_cooldown = SHOOT_COOLDOWN
             spawn_bullet_pos = self.pos
             self.bullet = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle)
+            self.bullet2 = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle+10)
+            self.bullet3 = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle-10)
             bullet_group.add(self.bullet)
             all_sprites_group.add(self.bullet)
+            bullet_group.add(self.bullet2)
+            all_sprites_group.add(self.bullet2)
+            bullet_group.add(self.bullet3)
+            all_sprites_group.add(self.bullet3)
 
     def move(self):
         self.pos += pygame.math.Vector2(self.velocity_x, self.velocity_y)
