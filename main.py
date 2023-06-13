@@ -24,8 +24,8 @@ class Player(pygame.sprite.Sprite):
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
-        self.x_change_mouse_player = (self.mouse_coords[0] - self.hitbox_rect.centerx)
-        self.y_change_mouse_player = (self.mouse_coords[1] - self.hitbox_rect.centery)
+        self.x_change_mouse_player = (self.mouse_coords[0] - WIDTH // 2)
+        self.y_change_mouse_player = (self.mouse_coords[1] - HEIGHT // 2)
         self.angle = math.degrees(math.atan2(self.y_change_mouse_player, self.x_change_mouse_player))
         self.rect = self.image.get_rect(center=self.hitbox_rect.center)
 
@@ -107,6 +107,21 @@ class Bullet(pygame.sprite.Sprite):
         self.bullet_movement()
 
 
+class Camera(pygame.sprite.Group):
+    def __init__(self):
+        super().__init__()
+        self.offset = pygame.math.Vector2()
+
+    def custom_draw(self):
+        self.offset.x = player.rect.centerx - WIDTH // 2
+        self.offset.y = player.rect.centery - HEIGHT // 2
+
+        for sprite in all_sprites_group:
+            offset_pos = sprite.rect.topleft - self.offset
+            screen.blit(sprite.image, offset_pos)
+
+
+camera = Camera()
 player = Player()
 
 all_sprites_group = pygame.sprite.Group()
@@ -114,7 +129,7 @@ bullet_group = pygame.sprite.Group()
 
 all_sprites_group.add(player)
 
-color = (255, 0, 0)
+color = (10, 150, 70)
 
 while True:
     keys = pygame.key.get_pressed()
@@ -125,7 +140,7 @@ while True:
 
     screen.fill(color)
 
-    all_sprites_group.draw(screen)
+    camera.custom_draw()
     all_sprites_group.update()
 
     pygame.display.update()
