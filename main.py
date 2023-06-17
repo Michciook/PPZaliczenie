@@ -2,6 +2,7 @@ import pygame
 from sys import exit
 import math
 from settings import *
+import random
 
 pygame.init()
 
@@ -125,6 +126,47 @@ class Bullet(pygame.sprite.Sprite):
         self.bullet_movement()
 
 
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, position):
+        super().__init__(enemy_group, all_sprites_group)
+        self.image = pygame.transform.rotozoom(pygame.image.load("enemy.png").convert_alpha(), 0, 2)
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.position = position
+
+        self.direction = pygame.math.Vector2()
+        self.velocity = pygame.math.Vector2()
+        self.speed = ENEMY_SPEED
+
+    def hunt_player(self):
+        player_vector = pygame.math.Vector2(player.hitbox_rect.center)
+        enemy_vector = pygame.math.Vector2(self.rect.center)
+        distance = self.get_vector_distance(player_vector, enemy_vector)
+
+        if distance > 0:
+            self.direction = (player_vector - enemy_vector).normalize()
+        else:
+            self.direction = pygame.math.Vector2
+
+        self.velocity = self.direction * self.speed
+        self.position += self.velocity
+
+        self.rect.centerx = self.position.x
+        self.rect.centery = self.position.y
+
+    def get_vector_distance(self, vector_1, vector_2):
+        return (vector_1 - vector_2).magnitude()
+
+    def _add_enemy(self):
+            enemy = Enemy((player.pos[0] + 1000, player.pos[1] + 1000))
+
+
+    def update(self):
+        self.hunt_player()
+        if random.randint(1, 30) == 1:
+            self._add_enemy()
+
+
 class Camera(pygame.sprite.Group):
     def __init__(self):
         super().__init__()
@@ -144,8 +186,11 @@ player = Player()
 
 all_sprites_group = pygame.sprite.Group()
 bullet_group = pygame.sprite.Group()
+enemy_group = pygame.sprite.Group()
 
 all_sprites_group.add(player)
+
+enemy = Enemy((1000,1000))
 
 color = (10, 150, 70)
 
