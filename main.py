@@ -21,6 +21,8 @@ class Player(pygame.sprite.Sprite):
         self.speed = PLAYER_SPEED
         self.shoot = False
         self.shoot_cooldown = 0
+        self.ability = False
+        self.ability_cooldown = 0
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
@@ -55,19 +57,26 @@ class Player(pygame.sprite.Sprite):
         else:
             self.shoot = False
 
+        if keys[pygame.K_SPACE]:
+            self.ability = True
+            self.ability_use()
+        else:
+            self.ability = False
+
+
+
     def is_shooting(self):
         if self.shoot_cooldown == 0:
             self.shoot_cooldown = SHOOT_COOLDOWN
-            spawn_bullet_pos = self.pos
-            self.bullet = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle)
-            self.bullet2 = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle+10)
-            self.bullet3 = Bullet(spawn_bullet_pos[0], spawn_bullet_pos[1], self.angle-10)
-            bullet_group.add(self.bullet)
-            all_sprites_group.add(self.bullet)
-            bullet_group.add(self.bullet2)
-            all_sprites_group.add(self.bullet2)
-            bullet_group.add(self.bullet3)
-            all_sprites_group.add(self.bullet3)
+            self.bullet = Bullet(self.pos[0], self.pos[1], self.angle)
+            self.bullet2 = Bullet(self.pos[0], self.pos[1], self.angle+10)
+            self.bullet3 = Bullet(self.pos[0], self.pos[1], self.angle-10)
+
+    def ability_use(self):
+        if self.ability_cooldown == 0:
+            self.ability_cooldown = ABILITY_COOLDOWN
+            for i in range(12):
+                ability_bullet = Bullet(self.pos[0], self.pos[1], 30*i)
 
     def move(self):
         self.pos += pygame.math.Vector2(self.velocity_x, self.velocity_y)
@@ -82,10 +91,13 @@ class Player(pygame.sprite.Sprite):
         if self.shoot_cooldown > 0:
             self.shoot_cooldown -= 1
 
+        if self.ability_cooldown > 0:
+            self.ability_cooldown -= 1
+
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, angle):
-        super().__init__()
+        super().__init__(all_sprites_group, bullet_group)
         self.image = pygame.image.load("Bullet.png").convert_alpha()
         self.image = pygame.transform.rotozoom(self.image, 0, BULLET_SCALE)
         self.rect = self.image.get_rect()
