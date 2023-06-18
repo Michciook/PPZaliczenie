@@ -11,6 +11,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Realm Of The *** ***")
 clock = pygame.time.Clock()
 
+def hitbox_collide(sprite1, sprite2):
+    return sprite1.base_zombie_rect.colliderect(sprite2.rect)
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -24,6 +26,7 @@ class Player(pygame.sprite.Sprite):
         self.shoot_cooldown = 0
         self.ability = False
         self.ability_cooldown = 0
+        self.health = 100
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
@@ -70,14 +73,15 @@ class Player(pygame.sprite.Sprite):
         if self.shoot_cooldown == 0:
             self.shoot_cooldown = SHOOT_COOLDOWN
             self.bullet = Bullet(self.pos[0], self.pos[1], self.angle)
-            self.bullet2 = Bullet(self.pos[0], self.pos[1], self.angle+10)
-            self.bullet3 = Bullet(self.pos[0], self.pos[1], self.angle-10)
+            player_bullet_group.add(self.bullet)
+
 
     def ability_use(self):
         if self.ability_cooldown == 0:
             self.ability_cooldown = ABILITY_COOLDOWN
             for i in range(12):
                 ability_bullet = Bullet(self.pos[0], self.pos[1], 30*i)
+                player_bullet_group.add(ability_bullet)
 
     def move(self):
         self.pos += pygame.math.Vector2(self.velocity_x, self.velocity_y)
@@ -98,7 +102,7 @@ class Player(pygame.sprite.Sprite):
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, angle):
-        super().__init__(all_sprites_group, bullet_group)
+        super().__init__(all_sprites_group)
         self.image = pygame.image.load("Bullet.png").convert_alpha()
         self.image = pygame.transform.rotozoom(self.image, 0, BULLET_SCALE)
         self.rect = self.image.get_rect()
@@ -129,24 +133,29 @@ class Bullet(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__(enemy_group, all_sprites_group)
-        self.image = pygame.transform.rotozoom(pygame.image.load("enemy.png").convert_alpha(), 0, 2)
+        self.image = pygame.image.load("enemy.png").convert_alpha()
+        self.image = pygame.transform.rotozoom(self.image, 0, 2)
+
         self.rect = self.image.get_rect()
         self.rect.center = position
-        self.position = position
 
         self.direction = pygame.math.Vector2()
         self.velocity = pygame.math.Vector2()
         self.speed = ENEMY_SPEED
 
+        self.position = pygame.math.Vector2(position)
+        self.shoot_cooldown = ENEMY_SHOOT_COOLDOWN
+
     def hunt_player(self):
         player_vector = pygame.math.Vector2(player.hitbox_rect.center)
         enemy_vector = pygame.math.Vector2(self.rect.center)
-        distance = self.get_vector_distance(player_vector, enemy_vector)
+        self.distance = self.get_vector_distance(player_vector, enemy_vector)
 
-        if distance > 0:
+        if self.distance > 200:
             self.direction = (player_vector - enemy_vector).normalize()
+
         else:
-            self.direction = pygame.math.Vector2
+            self.direction = pygame.math.Vector2()
 
         self.velocity = self.direction * self.speed
         self.position += self.velocity
@@ -154,17 +163,34 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.centerx = self.position.x
         self.rect.centery = self.position.y
 
+    def is_shooting(self):
+        if self.shoot_cooldown == 0 and self.distance < 400:
+            self.shoot_cooldown = ENEMY_SHOOT_COOLDOWN
+            bullet = Bullet(self.position[0], self.position[1],
+                            math.degrees(math.atan2(player.hitbox_rect.center[1] - self.position[1],
+                                                    player.hitbox_rect.center[0] - self.position[0])))
+            enemy_bullet_group.add(bullet)
+
     def get_vector_distance(self, vector_1, vector_2):
         return (vector_1 - vector_2).magnitude()
 
     def _add_enemy(self):
-            enemy = Enemy((player.pos[0] + 1000, player.pos[1] + 1000))
-
+        if random.randint(0, 1) == 1:
+            self.enemy = Enemy((player.pos[0] + random.randint(500,1000),
+                                player.pos[1] + random.randint(500,1000)))
+        else:
+            self.enemy = Enemy((player.pos[0] - random.randint(500, 1000),
+                                player.pos[1] - random.randint(500, 1000)))
 
     def update(self):
         self.hunt_player()
-        if random.randint(1, 30) == 1:
+        if random.randint(1, 120) == 1 and len(enemy_group) < 15:
             self._add_enemy()
+
+        self.is_shooting()
+
+        if self.shoot_cooldown > 0:
+            self.shoot_cooldown -= 1
 
 
 class Camera(pygame.sprite.Group):
@@ -185,7 +211,8 @@ camera = Camera()
 player = Player()
 
 all_sprites_group = pygame.sprite.Group()
-bullet_group = pygame.sprite.Group()
+player_bullet_group = pygame.sprite.Group()
+enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 
 all_sprites_group.add(player)
@@ -205,6 +232,18 @@ while True:
 
     camera.custom_draw()
     all_sprites_group.update()
+
+    for bullet in player_bullet_group:
+        hit = pygame.sprite.spritecollide(bullet, enemy_group, False)
+        for enemys in hit:
+            enemys.kill()
+            bullet.kill()
+
+    player_hit = pygame.sprite.spritecollide(player, enemy_bullet_group, False)
+    for bullet in player_hit:
+            player.health -= 10
+            bullet.kill()
+            print(player.health)
 
     pygame.display.update()
     clock.tick(FPS)
