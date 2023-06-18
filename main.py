@@ -11,9 +11,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Realm Of The *** ***")
 clock = pygame.time.Clock()
 
-def hitbox_collide(sprite1, sprite2):
-    return sprite1.base_zombie_rect.colliderect(sprite2.rect)
-
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -26,7 +23,15 @@ class Player(pygame.sprite.Sprite):
         self.shoot_cooldown = 0
         self.ability = False
         self.ability_cooldown = 0
-        self.health = 100
+        self.current_health = 100
+        self.maximum_health = 100
+        self.health_bar_length = 400
+
+        self.health_ratio = self.maximum_health / self.health_bar_length
+
+    def basic_health(self):
+        pygame.draw.rect(screen, (255, 0, 0), (10,10, self.current_health/self.health_ratio, 25))
+        pygame.draw.rect(screen, (255, 255, 255), (10, 10, self.health_bar_length, 25), 4)
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
@@ -75,14 +80,6 @@ class Player(pygame.sprite.Sprite):
             self.bullet = Bullet(self.pos[0], self.pos[1], self.angle)
             player_bullet_group.add(self.bullet)
 
-
-    def ability_use(self):
-        if self.ability_cooldown == 0:
-            self.ability_cooldown = ABILITY_COOLDOWN
-            for i in range(12):
-                ability_bullet = Bullet(self.pos[0], self.pos[1], 30*i)
-                player_bullet_group.add(ability_bullet)
-
     def move(self):
         self.pos += pygame.math.Vector2(self.velocity_x, self.velocity_y)
         self.hitbox_rect.center = self.pos
@@ -98,6 +95,31 @@ class Player(pygame.sprite.Sprite):
 
         if self.ability_cooldown > 0:
             self.ability_cooldown -= 1
+
+        self.basic_health()
+
+
+class Wizard(Player):
+    def ability_use(self):
+        if self.ability_cooldown == 0:
+            self.ability_cooldown = ABILITY_COOLDOWN
+            for i in range(12):
+                ability_bullet = Bullet(self.pos[0], self.pos[1], 30*i)
+                player_bullet_group.add(ability_bullet)
+
+
+class Knight(Player):
+    def __init__(self):
+        Player.__init__(self)
+        self.maximum_health = 200
+        self.current_health = 200
+        self.health_ratio = self.maximum_health / self.health_bar_length
+    def ability_use(self):
+        if self.ability_cooldown == 0:
+            self.ability_cooldown = ABILITY_COOLDOWN
+            for i in range(3):
+                ability_bullet = Bullet(self.pos[0], self.pos[1], self.angle-30 + (i * 15))
+                player_bullet_group.add(ability_bullet)
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -208,7 +230,7 @@ class Camera(pygame.sprite.Group):
 
 
 camera = Camera()
-player = Player()
+player = Knight()
 
 all_sprites_group = pygame.sprite.Group()
 player_bullet_group = pygame.sprite.Group()
@@ -241,9 +263,12 @@ while True:
 
     player_hit = pygame.sprite.spritecollide(player, enemy_bullet_group, False)
     for bullet in player_hit:
-            player.health -= 10
-            bullet.kill()
-            print(player.health)
+        player.current_health -= 10
+        bullet.kill()
+
+    if player.current_health <= 0:
+        pygame.quit()
+        exit()
 
     pygame.display.update()
     clock.tick(FPS)
