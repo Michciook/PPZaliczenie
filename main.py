@@ -23,15 +23,23 @@ class Player(pygame.sprite.Sprite):
         self.shoot_cooldown = 0
         self.ability = False
         self.ability_cooldown = 0
+
         self.current_health = 100
         self.maximum_health = 100
         self.health_bar_length = 400
-
         self.health_ratio = self.maximum_health / self.health_bar_length
 
-    def basic_health(self):
+        self.current_mana = 100
+        self.maximum_mana = 100
+        self.mana_ratio = self.maximum_mana / self.health_bar_length
+
+    def health_bar(self):
         pygame.draw.rect(screen, (255, 0, 0), (10,10, self.current_health/self.health_ratio, 25))
         pygame.draw.rect(screen, (255, 255, 255), (10, 10, self.health_bar_length, 25), 4)
+
+    def mana_bar(self):
+        pygame.draw.rect(screen, (0, 0, 255), (10,45, self.current_mana/self.mana_ratio, 25))
+        pygame.draw.rect(screen, (255, 255, 255), (10, 45, self.health_bar_length, 25), 4)
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
@@ -96,12 +104,17 @@ class Player(pygame.sprite.Sprite):
         if self.ability_cooldown > 0:
             self.ability_cooldown -= 1
 
-        self.basic_health()
+        if self.current_mana != 100:
+            self.current_mana += 0.1
+
+        self.health_bar()
+        self.mana_bar()
 
 
 class Wizard(Player):
     def ability_use(self):
-        if self.ability_cooldown == 0:
+        if self.current_mana >= 30 and self.ability_cooldown == 0:
+            self.current_mana -= 30
             self.ability_cooldown = ABILITY_COOLDOWN
             for i in range(12):
                 ability_bullet = Bullet(self.pos[0], self.pos[1], 30*i)
@@ -115,8 +128,8 @@ class Knight(Player):
         self.current_health = 200
         self.health_ratio = self.maximum_health / self.health_bar_length
     def ability_use(self):
-        if self.ability_cooldown == 0:
-            self.ability_cooldown = ABILITY_COOLDOWN
+        if self.current_mana >= 30 and self.ability_cooldown == 0:
+            self.current_mana -= 30
             for i in range(3):
                 ability_bullet = Bullet(self.pos[0], self.pos[1], self.angle-30 + (i * 15))
                 player_bullet_group.add(ability_bullet)
@@ -230,7 +243,7 @@ class Camera(pygame.sprite.Group):
 
 
 camera = Camera()
-player = Knight()
+player = Wizard()
 
 all_sprites_group = pygame.sprite.Group()
 player_bullet_group = pygame.sprite.Group()
@@ -269,6 +282,7 @@ while True:
     if player.current_health <= 0:
         pygame.quit()
         exit()
+
 
     pygame.display.update()
     clock.tick(FPS)
