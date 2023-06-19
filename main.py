@@ -10,10 +10,11 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Realm Of The *** ***")
 clock = pygame.time.Clock()
+BG = pygame.image.load("Background.png")
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__()
+        super().__init__(all_sprites_group)
         self.pos = pygame.math.Vector2(PLAYER_START_X, PLAYER_START_Y)
         self.image = pygame.transform.rotozoom(pygame.image.load("Player.png").convert_alpha(), 0, PLAYER_SIZE)
         self.hitbox_rect = self.image.get_rect(center=self.pos)
@@ -31,7 +32,8 @@ class Player(pygame.sprite.Sprite):
 
         self.current_mana = 100
         self.maximum_mana = 100
-        self.mana_ratio = self.maximum_mana / self.health_bar_length
+        self.mana_bar_length = 400
+        self.mana_ratio = self.maximum_mana / self.mana_bar_length
 
     def health_bar(self):
         pygame.draw.rect(screen, (255, 0, 0), (10,10, self.current_health/self.health_ratio, 25))
@@ -39,14 +41,15 @@ class Player(pygame.sprite.Sprite):
 
     def mana_bar(self):
         pygame.draw.rect(screen, (0, 0, 255), (10,45, self.current_mana/self.mana_ratio, 25))
-        pygame.draw.rect(screen, (255, 255, 255), (10, 45, self.health_bar_length, 25), 4)
+        pygame.draw.rect(screen, (255, 255, 255), (10, 45, self.mana_bar_length, 25), 4)
 
     def player_angle(self):
         self.mouse_coords = pygame.mouse.get_pos()
         self.x_change_mouse_player = (self.mouse_coords[0] - WIDTH // 2)
         self.y_change_mouse_player = (self.mouse_coords[1] - HEIGHT // 2)
-        self.angle = math.degrees(math.atan2(self.y_change_mouse_player, self.x_change_mouse_player))
+        angle = math.degrees(math.atan2(self.y_change_mouse_player, self.x_change_mouse_player))
         self.rect = self.image.get_rect(center=self.hitbox_rect.center)
+        return angle
 
     def user_input(self):
         self.velocity_x = 0
@@ -85,7 +88,7 @@ class Player(pygame.sprite.Sprite):
     def is_shooting(self):
         if self.shoot_cooldown == 0:
             self.shoot_cooldown = SHOOT_COOLDOWN
-            self.bullet = Bullet(self.pos[0], self.pos[1], self.angle)
+            self.bullet = Bullet(self.pos[0], self.pos[1], self.player_angle())
             player_bullet_group.add(self.bullet)
 
     def move(self):
@@ -104,7 +107,7 @@ class Player(pygame.sprite.Sprite):
         if self.ability_cooldown > 0:
             self.ability_cooldown -= 1
 
-        if self.current_mana != 100:
+        if self.current_mana < 100:
             self.current_mana += 0.1
 
         self.health_bar()
@@ -130,8 +133,9 @@ class Knight(Player):
     def ability_use(self):
         if self.current_mana >= 30 and self.ability_cooldown == 0:
             self.current_mana -= 30
+            self.ability_cooldown = ABILITY_COOLDOWN
             for i in range(3):
-                ability_bullet = Bullet(self.pos[0], self.pos[1], self.angle-30 + (i * 15))
+                ability_bullet = Bullet(self.pos[0], self.pos[1], self.player_angle()-30 + (i * 15))
                 player_bullet_group.add(ability_bullet)
 
 
@@ -242,47 +246,162 @@ class Camera(pygame.sprite.Group):
             screen.blit(sprite.image, offset_pos)
 
 
-camera = Camera()
-player = Wizard()
+class Button():
+    def __init__(self, image, pos, text_input, font, base_color, hovering_color):
+        self.image = image
+        self.x_pos = pos[0]
+        self.y_pos = pos[1]
+        self.font = font
+        self.base_color, self.hovering_color = base_color, hovering_color
+        self.text_input = text_input
+        self.text = self.font.render(self.text_input, True, self.base_color)
+        if self.image is None:
+            self.image = self.text
+        self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
+        self.text_rect = self.text.get_rect(center=(self.x_pos, self.y_pos))
+
+    def update(self, screen):
+        if self.image is not None:
+            screen.blit(self.image, self.rect)
+        screen.blit(self.text, self.text_rect)
+
+    def checkForInput(self, position):
+        if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top,
+                                                                                          self.rect.bottom):
+            return True
+        return False
+
+    def changeColor(self, position):
+        if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top,
+                                                                                          self.rect.bottom):
+            self.text = self.font.render(self.text_input, True, self.hovering_color)
+        else:
+            self.text = self.font.render(self.text_input, True, self.base_color)
+
+
 
 all_sprites_group = pygame.sprite.Group()
 player_bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 
-all_sprites_group.add(player)
-
 enemy = Enemy((1000,1000))
 
 color = (10, 150, 70)
+camera = Camera()
 
-while True:
-    keys = pygame.key.get_pressed()
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+
+def play_screen(player_class):
+    global player
+    if player_class == "knight":
+        player = Knight()
+    elif player_class == "wizard":
+        player = Wizard()
+    print(player)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+        screen.fill(color)
+
+        camera.custom_draw()
+        all_sprites_group.update()
+
+        for bullet in player_bullet_group:
+            hit = pygame.sprite.spritecollide(bullet, enemy_group, False)
+            for enemys in hit:
+                enemys.kill()
+                bullet.kill()
+
+        player_hit = pygame.sprite.spritecollide(player, enemy_bullet_group, False)
+        for bullet in player_hit:
+            player.current_health -= 10
+            bullet.kill()
+
+        if player.current_health <= 0:
             pygame.quit()
             exit()
 
-    screen.fill(color)
+        pygame.display.update()
+        clock.tick(FPS)
 
-    camera.custom_draw()
-    all_sprites_group.update()
+def get_font(size):
+    return pygame.font.Font("font.ttf", size)
 
-    for bullet in player_bullet_group:
-        hit = pygame.sprite.spritecollide(bullet, enemy_group, False)
-        for enemys in hit:
-            enemys.kill()
-            bullet.kill()
+def main_menu():
+    while True:
+        screen.blit(BG, (0, 0))
 
-    player_hit = pygame.sprite.spritecollide(player, enemy_bullet_group, False)
-    for bullet in player_hit:
-        player.current_health -= 10
-        bullet.kill()
+        MENU_MOUSE_POS = pygame.mouse.get_pos()
 
-    if player.current_health <= 0:
-        pygame.quit()
-        exit()
+        MENU_TEXT = get_font(60).render("REALM OF THE *** ***", True, "#b68f40")
+        MENU_RECT = MENU_TEXT.get_rect(center=(640, 100))
+
+        PLAY_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(640, 250),
+                             text_input="PLAY", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+        QUIT_BUTTON = Button(image=pygame.image.load("Quit Rect.png"), pos=(640, 550),
+                             text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+        screen.blit(MENU_TEXT, MENU_RECT)
+
+        for button in [PLAY_BUTTON, QUIT_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    class_selector()
+                if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    pygame.quit()
+                    exit()
+
+        pygame.display.update()
+        clock.tick(FPS)
 
 
-    pygame.display.update()
-    clock.tick(FPS)
+def class_selector():
+    while True:
+        screen.blit(BG, (0, 0))
+
+        MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+        MENU_TEXT = get_font(60).render("REALM OF THE *** ***", True, "#b68f40")
+        MENU_RECT = MENU_TEXT.get_rect(center=(640, 100))
+
+        WIZARD_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(640, 250),
+                             text_input="WIZZARD", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+        KNIGHT_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(640, 400),
+                             text_input="KNIGHT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+        BACK_BUTTON = Button(image=pygame.image.load("Quit Rect.png"), pos=(640, 550),
+                             text_input="BACK", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+        screen.blit(MENU_TEXT, MENU_RECT)
+
+        for button in [WIZARD_BUTTON, KNIGHT_BUTTON, BACK_BUTTON]:
+            button.changeColor(MENU_MOUSE_POS)
+            button.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if WIZARD_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    play_screen("wizard")
+                if KNIGHT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    play_screen("knight")
+                if BACK_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    main_menu()
+
+        pygame.display.update()
+        clock.tick(FPS)
+
+
+main_menu()
