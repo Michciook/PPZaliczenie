@@ -12,6 +12,7 @@ pygame.display.set_caption("Realm Of The *** ***")
 clock = pygame.time.Clock()
 BG = pygame.image.load("Background.png")
 
+
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__(all_sprites_group)
@@ -130,6 +131,8 @@ class Knight(Player):
         self.maximum_health = 200
         self.current_health = 200
         self.health_ratio = self.maximum_health / self.health_bar_length
+        self.image = pygame.transform.rotozoom(pygame.image.load("PlayerKnight.png").convert_alpha(), 0, PLAYER_SIZE)
+
     def ability_use(self):
         if self.current_mana >= 30 and self.ability_cooldown == 0:
             self.current_mana -= 30
@@ -173,7 +176,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, position):
         super().__init__(enemy_group, all_sprites_group)
         self.image = pygame.image.load("enemy.png").convert_alpha()
-        self.image = pygame.transform.rotozoom(self.image, 0, 2)
+        self.image = pygame.transform.rotozoom(self.image, 0, 0.7)
 
         self.rect = self.image.get_rect()
         self.rect.center = position
@@ -279,13 +282,10 @@ class Button():
             self.text = self.font.render(self.text_input, True, self.base_color)
 
 
-
 all_sprites_group = pygame.sprite.Group()
 player_bullet_group = pygame.sprite.Group()
 enemy_bullet_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
-
-enemy = Enemy((1000,1000))
 
 color = (10, 150, 70)
 camera = Camera()
@@ -297,8 +297,8 @@ def play_screen(player_class):
         player = Knight()
     elif player_class == "wizard":
         player = Wizard()
-    print(player)
 
+    enemy = Enemy((1000, 1000))
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -322,14 +322,18 @@ def play_screen(player_class):
             bullet.kill()
 
         if player.current_health <= 0:
-            pygame.quit()
-            exit()
+            player.kill()
+            for enemy in enemy_group:
+                enemy.kill()
+            main_menu()
 
         pygame.display.update()
         clock.tick(FPS)
 
+
 def get_font(size):
     return pygame.font.Font("font.ttf", size)
+
 
 def main_menu():
     while True:
@@ -352,6 +356,7 @@ def main_menu():
             button.update(screen)
 
         for event in pygame.event.get():
+
             if event.type == pygame.QUIT:
                 pygame.quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -375,10 +380,10 @@ def class_selector():
         MENU_RECT = MENU_TEXT.get_rect(center=(640, 100))
 
         WIZARD_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(640, 250),
-                             text_input="WIZZARD", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+                             text_input="WIZZARD", font=get_font(50), base_color="#d7fcd4", hovering_color="White")
 
         KNIGHT_BUTTON = Button(image=pygame.image.load("Play Rect.png"), pos=(640, 400),
-                             text_input="KNIGHT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+                             text_input="KNIGHT", font=get_font(55), base_color="#d7fcd4", hovering_color="White")
 
         BACK_BUTTON = Button(image=pygame.image.load("Quit Rect.png"), pos=(640, 550),
                              text_input="BACK", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
