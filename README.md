@@ -21,7 +21,7 @@ To run the game, ensure you have Python installed on your system along with the 
 ### Installation Steps
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/PPZaliczenie.git
+   git clone https://github.com/Michciook/PPZaliczenie.git
    ```
 2. Navigate to the project folder:
    ```sh
